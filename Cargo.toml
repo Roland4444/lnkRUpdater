@@ -4,9 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-axum = "0.7"
+axum = "0.8.7"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-anyhow = "1"  # для удобной обработки ошибок
+
+serde_json = "1"
+reqwest = { version = "0.13.1", features = ["json"] }
+tracing-subscriber = "0.3"
+dotenv = "0.15"          # для загрузки переменных окружения
+anyhow = "1"

@@ -168,25 +168,16 @@ async fn index_handler() -> impl IntoResponse {
 <html>
 <head>
     <title>Моё приложение</title>
-    <!-- Подключаем библиотеку BX24 -->
     <script src="//api.bitrix24.com/api/v1/"></script>
 </head>
 <body>
-    <h1>Hello, это моё приложение в Битрикс24!</h1>
-
+    <h1>Приложение загружено!</h1>
     <script>
-        // Ждём загрузки страницы и инициализации BX24
         BX24.init(function() {
-            console.log('BX24 инициализирована!');
-            
-            // Пример: получить данные текущего пользователя
-            BX24.callMethod('user.current', {}, function(result) {
-                if (result.error()) {
-                    console.error('Ошибка:', result.error());
-                } else {
-                    console.log('Пользователь:', result.data());
-                }
-            });
+            console.log('BX24 инициализирована');
+            // Сообщаем Битрикс24, что установка завершена
+            BX24.installFinish();
+            // Далее ваши вызовы API
         });
     </script>
 </body>

@@ -164,14 +164,33 @@ async fn chat_handler() -> impl IntoResponse {
 async fn index_handler() -> impl IntoResponse {
     let html = r#"<!DOCTYPE html>
 <html>
-<head><title>HI</title></head>
+<head>
+    <title>Моё приложение</title>
+    <!-- Подключаем библиотеку BX24 -->
+    <script src="//api.bitrix24.com/api/v1/"></script>
+</head>
 <body>
-    <h1>Hello</h1>
+    <h1>Hello, это моё приложение в Битрикс24!</h1>
+
+    <script>
+        // Ждём загрузки страницы и инициализации BX24
+        BX24.init(function() {
+            console.log('BX24 инициализирована!');
+            
+            // Пример: получить данные текущего пользователя
+            BX24.callMethod('user.current', {}, function(result) {
+                if (result.error()) {
+                    console.error('Ошибка:', result.error());
+                } else {
+                    console.log('Пользователь:', result.data());
+                }
+            });
+        });
+    </script>
 </body>
 </html>"#;
     Html(html)
 }
-
 //client_id        local.69a921c7882c22.06578563
 
 //client_secret    20ieVs0nl1PrqvDpxSB1hO7lDiG1HUOQNi5PlVPFc5AmDCx6Bn

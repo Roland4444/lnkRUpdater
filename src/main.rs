@@ -131,6 +131,8 @@ async fn main() -> anyhow::Result<()> {
     
     let app = Router::new()
         .route("/", get(index_handler))
+        .route("/", post(index_handler)) // POST – теперь 405 исчезнет
+
         .route("/up", get(up_form))
         .route("/lnk", get(show_links))
         .route("/updatelnk", post(update_link))

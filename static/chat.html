@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/three-js@79.0.0/three.min.js"></script>
 </head>
 <body>
-    <script>
+    <!-- <script>
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.z = 5;
@@ -42,6 +42,55 @@
                 }
             });
         });
-    </script>
+    </script> -->
+
+<script>
+window.onload = function() {
+
+        // 2. Проверим, загрузилась ли библиотека BX24
+        if (typeof BX24 !== 'undefined' && BX24) {
+            console.log('BX24 найдена, инициализируем...');
+            BX24.init(function() {
+                console.log('✅ BX24 инициализирована!');
+
+                // Здесь можно вызывать методы Битрикса
+                BX24.callMethod('user.current', {}, function(result) {
+                    if (result.error()) {
+                        console.error('Ошибка API:', result.error());
+                    } else {
+                        console.log('Пользователь:', result.data());
+                    }
+                });
+
+                // Здесь можно, например, менять цвет куба в зависимости от данных пользователя
+            });
+        } else {
+            console.error('❌ Библиотека BX24 не загружена. Приложение должно работать внутри iframe на портале Битрикс24.');
+        }
+
+        // 3. Запускаем Three.js (можно и до инициализации BX24)
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 5;
+
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const material = new THREE.MeshBasicMaterial({ color: 0x9725B3 });
+        const cube = new THREE.Mesh(geometry, material);
+        scene.add(cube);
+
+        function animate() {
+            requestAnimationFrame(animate);
+            cube.rotation.x += 0.01;
+            cube.rotation.y += 0.01;
+            renderer.render(scene, camera);
+        }
+        animate();
+    };
+</script>
+
 </body>
 </html>

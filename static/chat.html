@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>My first three.js app</title>
     <style>body { margin: 0; overflow: hidden; }</style>
+    <script src="//api.bitrix24.com/api/v1/"></script>
     <script src="https://cdn.jsdelivr.net/npm/three-js@79.0.0/three.min.js"></script>
 </head>
 <body>
@@ -28,6 +29,19 @@
             renderer.render(scene, camera);
         }
         animate();
+    </script>
+
+    <script>
+        BX24.init(function() {
+            console.log('Приложение загружено в Битрикс24');
+            BX24.callMethod('user.current', {}, function(result) {
+                if (result.error()) {
+                    console.error('Ошибка:', result.error());
+                } else {
+                    console.log('Пользователь:', result.data());
+                }
+            });
+        });
     </script>
 </body>
 </html>

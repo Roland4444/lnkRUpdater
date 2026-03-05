@@ -137,6 +137,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/lnk", get(show_links))
         .route("/updatelnk", post(update_link))
         .route("/chat", get(chat_handler))
+        .route("/chat", post(chat_handler))
         .route("/install", post(install_handler))
         .route("/webhook", post(webhook_handler))
         .nest_service("/static", ServeDir::new("static"))

@@ -3,7 +3,7 @@ use axum::{
     http::StatusCode,
     response::{Html, IntoResponse},
     routing::{get, post},
-    Json,  // <--- добавить эту строку
+    Json,  
     Router,
 };
 use serde::{Deserialize, Serialize};
@@ -13,17 +13,14 @@ use std::sync::{Arc, Mutex};
 use tokio::fs;
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-
-// --- Константы для менеджера ссылок ---
+use tower_http::services::ServeDir;
 const LINK_FILE: &str = "lnk";
 
-// --- Структуры для менеджера ссылок ---
 #[derive(Debug, Deserialize)]
 struct UpdateForm {
     content: String,
 }
 
-// --- Структуры для бота Битрикс24 ---
 
 #[derive(Debug, Deserialize)]
 struct InstallEvent {
@@ -78,7 +75,6 @@ struct TokenInfo {
     application_token: String,
 }
 
-// --- Конфигурация приложения (из .env) ---
 #[derive(Debug, Clone)]
 struct Config {
     client_id: String,
@@ -86,7 +82,7 @@ struct Config {
     bot_id: u64,
     your_user_id: u64,
     target_chat_id: String,
-    oauth_url: String, // можно захардкодить
+    oauth_url: String, 
 }
 
 impl Config {
@@ -102,64 +98,69 @@ impl Config {
     }
 }
 
-// --- Общее состояние приложения ---
 #[derive(Clone)]
 struct AppState {
-    // для бота
     http_client: reqwest::Client,
     config: Config,
     tokens: Arc<Mutex<HashMap<String, TokenInfo>>>,
-    // для менеджера ссылок (если понадобится, можно добавить)
 }
 
-// --- Основная функция ---
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // Загружаем переменные окружения из .env
     dotenv::dotenv().ok();
     
-    // Простая инициализация логирования (уровень info по умолчанию)
     tracing_subscriber::fmt::init();
 
     info!("Starting combined server on http://0.0.0.0:11111");
 
-    // Загружаем конфигурацию бота
     let config = Config::from_env().expect("Failed to load config from .env");
     info!("Config loaded: client_id={}", config.client_id);
 
-    // Создаём состояние
     let state = AppState {
         http_client: reqwest::Client::new(),
         config,
         tokens: Arc::new(Mutex::new(HashMap::new())),
     };
 
-    // Проверяем файл ссылок
     if Path::new(LINK_FILE).exists() {
         info!("Appending to existing log file: {}", LINK_FILE);
     } else {
         info!("Creating new log file: {}", LINK_FILE);
     }
 
-    // Собираем все маршруты
+    
     let app = Router::new()
-        // Маршруты менеджера ссылок
+        
         .route("/up", get(up_form))
         .route("/lnk", get(show_links))
         .route("/updatelnk", post(update_link))
-        // Маршруты бота
+        .route("/chat", get(chat_handler))
         .route("/install", post(install_handler))
         .route("/webhook", post(webhook_handler))
-        .with_state(state); // передаём состояние во все обработчики
+        .nest_service("/static", ServeDir::new("static"))
+        .with_state(state); 
 
-    // Запускаем сервер
     let listener = tokio::net::TcpListener::bind("0.0.0.0:11111").await?;
     axum::serve(listener, app).await?;
 
     Ok(())
 }
 
-// --- Обработчики менеджера ссылок (без изменений) ---
+async fn chat_handler() -> impl IntoResponse {
+    match std::fs::read_to_string("static/chat.html"){
+        Ok(content) => Html(content),
+        Err(_) => {
+            Html(
+                r#"
+                   !!!!!!!!ERROR!!!!!!!!!!!!
+                "#.to_string(),                
+            )
+        }
+    }
+    
+}
+
+
 
 async fn up_form() -> impl IntoResponse {
     let html = r#"<!DOCTYPE html>
@@ -209,9 +210,7 @@ async fn update_link(Form(form): Form<UpdateForm>) -> impl IntoResponse {
     (StatusCode::OK, "Link updated successfully.".to_string())
 }
 
-// --- Обработчики бота Битрикс24 (адаптированы под общее состояние) ---
 
-/// Установка приложения — сохраняем токены
 async fn install_handler(
     State(state): State<AppState>,
     Json(payload): Json<InstallEvent>,
@@ -226,7 +225,6 @@ async fn install_handler(
         application_token: payload.auth.application_token,
     };
 
-    // Сохраняем токены для этого портала
     {
         let mut tokens = state.tokens.lock().unwrap();
         tokens.insert(member_id.clone(), token_info);
@@ -237,21 +235,18 @@ async fn install_handler(
     (StatusCode::OK, Json(serde_json::json!({"result": "ok"})))
 }
 
-/// Обработка нового сообщения
 async fn webhook_handler(
     State(state): State<AppState>,
     Json(payload): Json<WebhookEvent>,
 ) -> impl IntoResponse {
     info!("Получен вебхук: event={}", payload.event);
 
-    // Проверяем, что это событие нового сообщения
     if payload.event != "ONIMBOTMESSAGEADD" {
         return (StatusCode::OK, Json(serde_json::json!({"status": "ignored"})));
     }
 
     let member_id = &payload.auth.member_id;
 
-    // Достаём сохранённые токены для этого портала
     let token_info = {
         let tokens = state.tokens.lock().unwrap();
         tokens.get(member_id).cloned()
@@ -265,29 +260,24 @@ async fn webhook_handler(
         }
     };
 
-    // Проверяем application_token (совпадает ли с сохранённым)
     if payload.auth.application_token != token_info.application_token {
         eprintln!("Неверный application_token");
         return (StatusCode::FORBIDDEN, Json(serde_json::json!({"status": "invalid_token"})));
     }
 
-    // Определяем ID чата (убираем префикс 'chat' если есть)
     let dialog_id = &payload.data.params.dialog_id;
     let clean_dialog_id = dialog_id.strip_prefix("chat").unwrap_or(dialog_id);
 
-    // Сравниваем с целевым ID из конфига
     if clean_dialog_id != state.config.target_chat_id {
         info!("Сообщение не из целевого чата: {}", clean_dialog_id);
         return (StatusCode::OK, Json(serde_json::json!({"status": "ignored"})));
     }
 
-    // Формируем текст пересылки
     let forward_text = format!(
         "Сообщение из коллабы от пользователя {}:\n{}",
         payload.data.params.user_id, payload.data.params.message
     );
 
-    // Отправляем сообщение себе через API
     let send_result = send_message(
         &state.http_client,
         &token_info.access_token,
@@ -306,7 +296,6 @@ async fn webhook_handler(
     (StatusCode::OK, Json(serde_json::json!({"status": "ok"})))
 }
 
-/// Отправка сообщения через REST API Битрикс24
 async fn send_message(
     client: &reqwest::Client,
     access_token: &str,

@@ -14,3 +14,5 @@ reqwest = { version = "0.13.1", features = ["json"] }
 tracing-subscriber = "0.3"
 dotenv = "0.15"          # для загрузки переменных окружения
 anyhow = "1"
+tower = "0.5.3"
+tower-http = { version = "0.6.0", features = ["fs"] }

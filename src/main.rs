@@ -130,7 +130,7 @@ async fn main() -> anyhow::Result<()> {
 
     
     let app = Router::new()
-        
+        .route("/", get(index_handler))
         .route("/up", get(up_form))
         .route("/lnk", get(show_links))
         .route("/updatelnk", post(update_link))
@@ -161,6 +161,20 @@ async fn chat_handler() -> impl IntoResponse {
 }
 
 
+async fn index_handler() -> impl IntoResponse {
+    let html = r#"<!DOCTYPE html>
+<html>
+<head><title>HI</title></head>
+<body>
+    <h1>Hello</h1>
+</body>
+</html>"#;
+    Html(html)
+}
+
+//client_id        local.69a921c7882c22.06578563
+
+//client_secret    20ieVs0nl1PrqvDpxSB1hO7lDiG1HUOQNi5PlVPFc5AmDCx6Bn
 
 async fn up_form() -> impl IntoResponse {
     let html = r#"<!DOCTYPE html>
